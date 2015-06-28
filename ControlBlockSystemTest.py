@@ -154,38 +154,45 @@ def main():
         systest.setVerbose(True)
 
         # Download Firmware
-        retcode = programmer.flashFirmware()
-        systest.testEquals(retcode, 0)
+        # retcode = programmer.flashFirmware()
+        # print "Testing, if firmware was successfully loaded."
+        # systest.testEquals(retcode, 0)
 
         # Press button to turn on RPi
         btn.setPressed()
-        time.sleep(0.1)
+        time.sleep(1.5)
+        print "Testing, if button turns on the supply voltage."
         systest.testEquals(rpi5v.getSignal(), GPIO.HIGH)
+
+        # check, if MCP23017 components can be found
+        try:
+            result = check_output(
+                "sudo i2cdetect -y 1 | grep \"20: 20\"", shell=True)
+            print "Testing, if GPIO expanders can be found."
+            systest.testEquals(result[:27], "20: 20 -- -- -- -- -- -- 27")
+        except CalledProcessError, e:
+            systest.testEquals(0, 1)
 
         # Set RPi_Status bit
         rpistatus.setHIGH()
         # Release button to turn off RPi
         btn.setReleased()
         time.sleep(0.1)
+        print "Testing, if supply voltage is high and if shutdown signal is high."
         systest.testEquals(rpi5v.getSignal(), GPIO.HIGH)
         systest.testEquals(rpishutdown.getSignal(), GPIO.HIGH)
 
         # Set RPi_Status bit
         rpistatus.setLOW()
         time.sleep(0.1)
+        print "Testing, if supply voltage is low."
         systest.testEquals(rpi5v.getSignal(), GPIO.LOW)
 
-        # check, if MCP23017 components can be found
-        try:
-            result = check_output(
-                "sudo i2cdetect -y 1 | grep \"20: 20\"", shell=True)
-            systest.testEquals(result[:27], "20: 20 -- -- -- -- -- -- 27")
-        except CalledProcessError, e:
-            systest.testEquals(0, 1)
-
         if systest.hasPassed():
+            print "\n\nSystem test passed.\n"
             statusled.setDutyCycle(100)
         else:
+            print "\n\nSystem test FAILED.\n"
             statusled.setFrequency(5)
 
         isBoardAttached = True
